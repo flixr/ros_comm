@@ -70,7 +70,7 @@ CHECK_FUNCTION_EXISTS(trunc HAVE_TRUNC)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/libros/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-add_library(roscpp 
+add_library(roscpp
   src/libros/master.cpp
   src/libros/network.cpp
   src/libros/subscriber.cpp
@@ -118,6 +118,7 @@ add_library(roscpp
   src/libros/poll_set.cpp
   src/libros/service.cpp
   src/libros/this_node.cpp
+  src/libros/steady_timer.cpp
   )
 
 add_dependencies(roscpp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})

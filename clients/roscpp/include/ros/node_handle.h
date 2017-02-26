@@ -36,6 +36,7 @@
 #include "ros/timer.h"
 #include "ros/rate.h"
 #include "ros/wall_timer.h"
+#include "ros/steady_timer.h"
 #include "ros/advertise_options.h"
 #include "ros/advertise_service_options.h"
 #include "ros/subscribe_options.h"
@@ -95,7 +96,7 @@ namespace ros
      * ros::start() and sets the reference count to 1.
      *
      * \param ns Namespace for this NodeHandle.  This acts in addition to any namespace assigned to this ROS node.
-     *           eg. If the node's namespace is "/a" and the namespace passed in here is "b", all 
+     *           eg. If the node's namespace is "/a" and the namespace passed in here is "b", all
      *           topics/services/parameters will be prefixed with "/a/b/"
      * \param remappings Remappings for this NodeHandle.
      * \throws InvalidNameException if the namespace is not a valid graph resource name
@@ -147,7 +148,7 @@ namespace ros
      *
      * This version also lets you pass in name remappings that are specific to this NodeHandle
      *
-     * When a NodeHandle is copied, it inherits the namespace of the NodeHandle being copied, 
+     * When a NodeHandle is copied, it inherits the namespace of the NodeHandle being copied,
      * and increments the reference count of the global node state
      * by 1.
      * \throws InvalidNameException if the namespace is not a valid graph resource name
@@ -179,9 +180,9 @@ namespace ros
      * NodeHandle.  If none has been explicitly set, returns the global
      * queue.
      */
-    CallbackQueueInterface* getCallbackQueue() const 
-    { 
-      return callback_queue_ ? callback_queue_ : (CallbackQueueInterface*)getGlobalCallbackQueue(); 
+    CallbackQueueInterface* getCallbackQueue() const
+    {
+      return callback_queue_ ? callback_queue_ : (CallbackQueueInterface*)getGlobalCallbackQueue();
     }
 
     /**
@@ -279,7 +280,7 @@ namespace ros
      }
 
      MyClass my_class;
-     ros::Publisher pub = handle.advertise<std_msgs::Empty>("my_topic", 1, 
+     ros::Publisher pub = handle.advertise<std_msgs::Empty>("my_topic", 1,
                                                             boost::bind(&MyClass::connectCallback, my_class, _1));
      \endverbatim
      *
@@ -398,7 +399,7 @@ if (sub)  // Enter if subscriber is valid
    *  \throws ConflictingSubscriptionException If this node is already subscribed to the same topic with a different datatype
    */
   template<class M, class T>
-  Subscriber subscribe(const std::string& topic, uint32_t queue_size, void(T::*fp)(M), T* obj, 
+  Subscriber subscribe(const std::string& topic, uint32_t queue_size, void(T::*fp)(M), T* obj,
                        const TransportHints& transport_hints = TransportHints())
   {
     SubscribeOptions ops;
@@ -409,7 +410,7 @@ if (sub)  // Enter if subscriber is valid
 
   /// and the const version
   template<class M, class T>
-  Subscriber subscribe(const std::string& topic, uint32_t queue_size, void(T::*fp)(M) const, T* obj, 
+  Subscriber subscribe(const std::string& topic, uint32_t queue_size, void(T::*fp)(M) const, T* obj,
                        const TransportHints& transport_hints = TransportHints())
   {
     SubscribeOptions ops;
@@ -461,8 +462,8 @@ if (sub)  // Enter if subscriber is valid
    *  \throws ConflictingSubscriptionException If this node is already subscribed to the same topic with a different datatype
    */
   template<class M, class T>
-  Subscriber subscribe(const std::string& topic, uint32_t queue_size, 
-                       void(T::*fp)(const boost::shared_ptr<M const>&), T* obj, 
+  Subscriber subscribe(const std::string& topic, uint32_t queue_size,
+                       void(T::*fp)(const boost::shared_ptr<M const>&), T* obj,
                        const TransportHints& transport_hints = TransportHints())
   {
     SubscribeOptions ops;
@@ -471,8 +472,8 @@ if (sub)  // Enter if subscriber is valid
     return subscribe(ops);
   }
   template<class M, class T>
-  Subscriber subscribe(const std::string& topic, uint32_t queue_size, 
-                       void(T::*fp)(const boost::shared_ptr<M const>&) const, T* obj, 
+  Subscriber subscribe(const std::string& topic, uint32_t queue_size,
+                       void(T::*fp)(const boost::shared_ptr<M const>&) const, T* obj,
                        const TransportHints& transport_hints = TransportHints())
   {
     SubscribeOptions ops;
@@ -525,7 +526,7 @@ if (sub)  // Enter if subscriber is valid
    *  \throws ConflictingSubscriptionException If this node is already subscribed to the same topic with a different datatype
    */
   template<class M, class T>
-  Subscriber subscribe(const std::string& topic, uint32_t queue_size, void(T::*fp)(M), 
+  Subscriber subscribe(const std::string& topic, uint32_t queue_size, void(T::*fp)(M),
                        const boost::shared_ptr<T>& obj, const TransportHints& transport_hints = TransportHints())
   {
     SubscribeOptions ops;
@@ -536,7 +537,7 @@ if (sub)  // Enter if subscriber is valid
   }
 
   template<class M, class T>
-  Subscriber subscribe(const std::string& topic, uint32_t queue_size, void(T::*fp)(M) const, 
+  Subscriber subscribe(const std::string& topic, uint32_t queue_size, void(T::*fp)(M) const,
                        const boost::shared_ptr<T>& obj, const TransportHints& transport_hints = TransportHints())
   {
     SubscribeOptions ops;
@@ -590,8 +591,8 @@ if (sub)  // Enter if subscriber is valid
    *  \throws ConflictingSubscriptionException If this node is already subscribed to the same topic with a different datatype
    */
   template<class M, class T>
-  Subscriber subscribe(const std::string& topic, uint32_t queue_size, 
-                       void(T::*fp)(const boost::shared_ptr<M const>&), 
+  Subscriber subscribe(const std::string& topic, uint32_t queue_size,
+                       void(T::*fp)(const boost::shared_ptr<M const>&),
                        const boost::shared_ptr<T>& obj, const TransportHints& transport_hints = TransportHints())
   {
     SubscribeOptions ops;
@@ -601,8 +602,8 @@ if (sub)  // Enter if subscriber is valid
     return subscribe(ops);
   }
   template<class M, class T>
-  Subscriber subscribe(const std::string& topic, uint32_t queue_size, 
-                       void(T::*fp)(const boost::shared_ptr<M const>&) const, 
+  Subscriber subscribe(const std::string& topic, uint32_t queue_size,
+                       void(T::*fp)(const boost::shared_ptr<M const>&) const,
                        const boost::shared_ptr<T>& obj, const TransportHints& transport_hints = TransportHints())
   {
     SubscribeOptions ops;
@@ -1141,7 +1142,7 @@ if (service)  // Enter if advertised service is valid
    * \throws InvalidNameException If the service name begins with a tilde, or is an otherwise invalid graph resource name
    */
   template<class MReq, class MRes>
-  ServiceServer advertiseService(const std::string& service, const boost::function<bool(MReq&, MRes&)>& callback, 
+  ServiceServer advertiseService(const std::string& service, const boost::function<bool(MReq&, MRes&)>& callback,
                                  const VoidConstPtr& tracked_object = VoidConstPtr())
   {
     AdvertiseServiceOptions ops;
@@ -1186,7 +1187,7 @@ if (service)  // Enter if advertised service is valid
    * \throws InvalidNameException If the service name begins with a tilde, or is an otherwise invalid graph resource name
    */
   template<class S>
-  ServiceServer advertiseService(const std::string& service, const boost::function<bool(S&)>& callback, 
+  ServiceServer advertiseService(const std::string& service, const boost::function<bool(S&)>& callback,
                                  const VoidConstPtr& tracked_object = VoidConstPtr())
   {
     AdvertiseServiceOptions ops;
@@ -1236,7 +1237,7 @@ if (service)  // Enter if advertised service is valid
    * \throws InvalidNameException If the service name begins with a tilde, or is an otherwise invalid graph resource name
    */
   template<class MReq, class MRes>
-  ServiceClient serviceClient(const std::string& service_name, bool persistent = false, 
+  ServiceClient serviceClient(const std::string& service_name, bool persistent = false,
                               const M_string& header_values = M_string())
   {
     ServiceClientOptions ops;
@@ -1256,7 +1257,7 @@ if (service)  // Enter if advertised service is valid
    * \throws InvalidNameException If the service name begins with a tilde, or is an otherwise invalid graph resource name
    */
   template<class Service>
-  ServiceClient serviceClient(const std::string& service_name, bool persistent = false, 
+  ServiceClient serviceClient(const std::string& service_name, bool persistent = false,
                               const M_string& header_values = M_string())
   {
     ServiceClientOptions ops;
@@ -1309,7 +1310,7 @@ if (service)  // Enter if advertised service is valid
    * \param autostart If true (default), return timer that is already started
    */
   template<class T>
-  Timer createTimer(Duration period, void(T::*callback)(const TimerEvent&) const, T* obj, 
+  Timer createTimer(Duration period, void(T::*callback)(const TimerEvent&) const, T* obj,
                     bool oneshot = false, bool autostart = true) const
   {
     return createTimer(period, boost::bind(callback, obj, _1), oneshot, autostart);
@@ -1329,7 +1330,7 @@ if (service)  // Enter if advertised service is valid
    * \param autostart If true (default), return timer that is already started
    */
   template<class T>
-  Timer createTimer(Duration period, void(T::*callback)(const TimerEvent&), T* obj, 
+  Timer createTimer(Duration period, void(T::*callback)(const TimerEvent&), T* obj,
                     bool oneshot = false, bool autostart = true) const
   {
     return createTimer(period, boost::bind(callback, obj, _1), oneshot, autostart);
@@ -1351,7 +1352,7 @@ if (service)  // Enter if advertised service is valid
    * \param autostart If true (default), return timer that is already started
    */
   template<class T>
-  Timer createTimer(Duration period, void(T::*callback)(const TimerEvent&), const boost::shared_ptr<T>& obj, 
+  Timer createTimer(Duration period, void(T::*callback)(const TimerEvent&), const boost::shared_ptr<T>& obj,
                     bool oneshot = false, bool autostart = true) const
   {
     TimerOptions ops(period, boost::bind(callback, obj.get(), _1), 0);
@@ -1406,7 +1407,7 @@ if (service)  // Enter if advertised service is valid
    * \param autostart If true (default), return timer that is already started
    */
   template<class T>
-  WallTimer createWallTimer(WallDuration period, void(T::*callback)(const WallTimerEvent&), T* obj, 
+  WallTimer createWallTimer(WallDuration period, void(T::*callback)(const WallTimerEvent&), T* obj,
                             bool oneshot = false, bool autostart = true) const
   {
     return createWallTimer(period, boost::bind(callback, obj, _1), oneshot, autostart);
@@ -1428,8 +1429,8 @@ if (service)  // Enter if advertised service is valid
    * \param oneshot If true, this timer will only fire once
    */
   template<class T>
-  WallTimer createWallTimer(WallDuration period, void(T::*callback)(const WallTimerEvent&), 
-                            const boost::shared_ptr<T>& obj, 
+  WallTimer createWallTimer(WallDuration period, void(T::*callback)(const WallTimerEvent&),
+                            const boost::shared_ptr<T>& obj,
                             bool oneshot = false, bool autostart = true) const
   {
     WallTimerOptions ops(period, boost::bind(callback, obj.get(), _1), 0);
@@ -1451,7 +1452,7 @@ if (service)  // Enter if advertised service is valid
    * \param callback The function to call
    * \param oneshot If true, this timer will only fire once
    */
-  WallTimer createWallTimer(WallDuration period, const WallTimerCallback& callback, 
+  WallTimer createWallTimer(WallDuration period, const WallTimerCallback& callback,
                             bool oneshot = false, bool autostart = true) const;
 
   /**
@@ -1465,6 +1466,85 @@ if (service)  // Enter if advertised service is valid
    * \param ops The options to use when creating the timer
    */
   WallTimer createWallTimer(WallTimerOptions& ops) const;
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // Versions of createSteadyTimer()
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  /**
+   * \brief Create a timer which will call a callback at the specified rate, using wall time to determine
+   * when to call the callback instead of ROS time.
+   * This variant takes a class member function, and a bare pointer to the object to call the method on.
+   *
+   * When the Timer (and all copies of it) returned goes out of scope, the timer will automatically
+   * be stopped, and the callback will no longer be called.
+   *
+   * \param period The period at which to call the callback
+   * \param callback The method to call
+   * \param obj The object to call the method on
+   * \param oneshot If true, this timer will only fire once
+   * \param autostart If true (default), return timer that is already started
+   */
+  template<class T>
+  SteadyTimer createSteadyTimer(WallDuration period, void(T::*callback)(const SteadyTimerEvent&), T* obj,
+                                      bool oneshot = false, bool autostart = true) const
+  {
+    return createSteadyTimer(period, boost::bind(callback, obj, _1), oneshot, autostart);
+  }
+
+  /**
+   * \brief Create a timer which will call a callback at the specified rate, using wall time to determine
+   * when to call the callback instead of ROS time.  This variant takes
+   * a class member function, and a shared pointer to the object to call the method on.
+   *
+   * When the Timer (and all copies of it) returned goes out of scope, the timer will automatically
+   * be stopped, and the callback will no longer be called.
+   *
+   * \param period The period at which to call the callback
+   * \param callback The method to call
+   * \param obj The object to call the method on.  Since this is a shared pointer, the object will
+   * automatically be tracked with a weak_ptr so that if it is deleted before the Timer goes out of
+   * scope the callback will no longer be called (and therefore will not crash).
+   * \param oneshot If true, this timer will only fire once
+   */
+  template<class T>
+  SteadyTimer createSteadyTimer(WallDuration period, void(T::*callback)(const SteadyTimerEvent&),
+                                      const boost::shared_ptr<T>& obj,
+                                      bool oneshot = false, bool autostart = true) const
+  {
+    SteadyTimerOptions ops(period, boost::bind(callback, obj.get(), _1), 0);
+    ops.tracked_object = obj;
+    ops.oneshot = oneshot;
+    ops.autostart = autostart;
+    return createSteadyTimer(ops);
+  }
+
+  /**
+   * \brief Create a timer which will call a callback at the specified rate, using wall time to determine
+   * when to call the callback instead of ROS time.  This variant takes
+   * anything that can be bound to a Boost.Function, including a bare function
+   *
+   * When the Timer (and all copies of it) returned goes out of scope, the timer will automatically
+   * be stopped, and the callback will no longer be called.
+   *
+   * \param period The period at which to call the callback
+   * \param callback The function to call
+   * \param oneshot If true, this timer will only fire once
+   */
+  SteadyTimer createSteadyTimer(WallDuration period, const SteadyTimerCallback& callback,
+                                      bool oneshot = false, bool autostart = true) const;
+
+  /**
+   * \brief Create a timer which will call a callback at the specified rate, using wall time to determine
+   * when to call the callback instead of ROS time.  This variant allows
+   * the full range of TimerOptions.
+   *
+   * When the Timer (and all copies of it) returned goes out of scope, the timer will automatically
+   * be stopped, and the callback will no longer be called.
+   *
+   * \param ops The options to use when creating the timer
+   */
+  SteadyTimer createSteadyTimer(SteadyTimerOptions& ops) const;
 
   /** \brief Set an arbitrary XML/RPC value on the parameter server.
    *
