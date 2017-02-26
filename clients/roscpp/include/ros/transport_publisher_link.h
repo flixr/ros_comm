@@ -83,7 +83,7 @@ private:
   int32_t retry_timer_handle_;
   bool needs_retry_;
   WallDuration retry_period_;
-  WallTime next_retry_;
+  MonotonicTime next_retry_;
   bool dropping_;
 };
 typedef boost::shared_ptr<TransportPublisherLink> TransportPublisherLinkPtr;

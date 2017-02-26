@@ -180,9 +180,9 @@ private:
         event.current_real = T::now();
         event.profile.last_duration = info->last_cb_duration;
 
-        WallTime cb_start = WallTime::now();
+        MonotonicTime cb_start = MonotonicTime::now();
         info->callback(event);
-        WallTime cb_end = WallTime::now();
+        MonotonicTime cb_end = MonotonicTime::now();
         info->last_cb_duration = cb_end - cb_start;
 
         info->last_real = event.current_real;
@@ -431,12 +431,12 @@ void TimerManager<T, D, E>::setPeriod(int32_t handle, const D& period, bool rese
 
   {
     boost::mutex::scoped_lock lock(waiting_mutex_);
-  
+
     if(reset)
     {
       info->next_expected = T::now() + period;
     }
-    
+
     // else if some time has elapsed since last cb (called outside of cb)
     else if( (T::now() - info->last_real) < info->period)
     {
@@ -446,17 +446,17 @@ void TimerManager<T, D, E>::setPeriod(int32_t handle, const D& period, bool rese
       {
         info->next_expected = T::now();
       }
-   
+
       // else, account for elapsed time by using last_real+period
       else
       {
         info->next_expected = info->last_real + period;
       }
     }
-    
+
     // Else if called in a callback, last_real has not been updated yet => (now - last_real) > period
     // In this case, let next_expected be updated only in updateNext
-    
+
     info->period = period;
     waiting_.sort(boost::bind(&TimerManager::waitingCompare, this, _1, _2));
   }
