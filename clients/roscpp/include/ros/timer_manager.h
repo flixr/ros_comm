@@ -32,16 +32,17 @@
 #include "ros/time.h"
 #include "ros/file_log.h"
 
-#include <boost/thread/thread.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/recursive_mutex.hpp>
-#include <boost/thread/condition_variable.hpp>
+#include <boost/bind.hpp>
 
 #include "ros/assert.h"
 #include "ros/callback_queue_interface.h"
 
 #include <vector>
 #include <list>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <chrono>
 
 namespace ros
 {
@@ -71,7 +72,7 @@ private:
     bool has_tracked_object;
 
     // TODO: atomicize
-    boost::mutex waiting_mutex;
+    std::mutex waiting_mutex;
     uint32_t waiting_callbacks;
 
     bool oneshot;
@@ -110,19 +111,19 @@ private:
   void updateNext(const TimerInfoPtr& info, const T& current_time);
 
   V_TimerInfo timers_;
-  boost::mutex timers_mutex_;
-  boost::condition_variable timers_cond_;
+  std::mutex timers_mutex_;
+  std::condition_variable timers_cond_;
   volatile bool new_timer_;
 
-  boost::mutex waiting_mutex_;
+  std::mutex waiting_mutex_;
   L_int32 waiting_;
 
   uint32_t id_counter_;
-  boost::mutex id_mutex_;
+  std::mutex id_mutex_;
 
   bool thread_started_;
 
-  boost::thread thread_;
+  std::thread thread_;
 
   bool quit_;
 
@@ -137,7 +138,7 @@ private:
     , current_expected_(current_expected)
     , called_(false)
     {
-      boost::mutex::scoped_lock lock(info->waiting_mutex);
+      std::unique_lock<std::mutex> lock(info->waiting_mutex);
       ++info->waiting_callbacks;
     }
 
@@ -146,7 +147,7 @@ private:
       TimerInfoPtr info = info_.lock();
       if (info)
       {
-        boost::mutex::scoped_lock lock(info->waiting_mutex);
+        std::unique_lock<std::mutex> lock(info->waiting_mutex);
         --info->waiting_callbacks;
       }
     }
@@ -216,7 +217,7 @@ TimerManager<T, D, E>::~TimerManager()
 {
   quit_ = true;
   {
-    boost::mutex::scoped_lock lock(timers_mutex_);
+    std::unique_lock<std::mutex> lock(timers_mutex_);
     timers_cond_.notify_all();
   }
   if (thread_started_)
@@ -257,7 +258,7 @@ typename TimerManager<T, D, E>::TimerInfoPtr TimerManager<T, D, E>::findTimer(in
 template<class T, class D, class E>
 bool TimerManager<T, D, E>::hasPending(int32_t handle)
 {
-  boost::mutex::scoped_lock lock(timers_mutex_);
+  std::unique_lock<std::mutex> lock(timers_mutex_);
   TimerInfoPtr info = findTimer(handle);
 
   if (!info)
@@ -274,7 +275,7 @@ bool TimerManager<T, D, E>::hasPending(int32_t handle)
     }
   }
 
-  boost::mutex::scoped_lock lock2(info->waiting_mutex);
+  std::unique_lock<std::mutex> lock2(info->waiting_mutex);
   return info->next_expected <= T::now() || info->waiting_callbacks != 0;
 }
 
@@ -300,22 +301,22 @@ int32_t TimerManager<T, D, E>::add(const D& period, const boost::function<void(c
   }
 
   {
-    boost::mutex::scoped_lock lock(id_mutex_);
+    std::unique_lock<std::mutex> lock(id_mutex_);
     info->handle = id_counter_++;
   }
 
   {
-    boost::mutex::scoped_lock lock(timers_mutex_);
+    std::unique_lock<std::mutex> lock(timers_mutex_);
     timers_.push_back(info);
 
     if (!thread_started_)
     {
-      thread_ = boost::thread(boost::bind(&TimerManager::threadFunc, this));
+      thread_ = std::thread(boost::bind(&TimerManager::threadFunc, this));
       thread_started_ = true;
     }
 
     {
-      boost::mutex::scoped_lock lock(waiting_mutex_);
+      std::unique_lock<std::mutex> lock(waiting_mutex_);
       waiting_.push_back(info->handle);
       waiting_.sort(boost::bind(&TimerManager::waitingCompare, this, _1, _2));
     }
@@ -334,7 +335,7 @@ void TimerManager<T, D, E>::remove(int32_t handle)
   uint64_t remove_id = 0;
 
   {
-    boost::mutex::scoped_lock lock(timers_mutex_);
+    std::unique_lock<std::mutex> lock(timers_mutex_);
 
     typename V_TimerInfo::iterator it = timers_.begin();
     typename V_TimerInfo::iterator end = timers_.end();
@@ -352,7 +353,7 @@ void TimerManager<T, D, E>::remove(int32_t handle)
     }
 
     {
-      boost::mutex::scoped_lock lock2(waiting_mutex_);
+      std::unique_lock<std::mutex> lock2(waiting_mutex_);
       // Remove from the waiting list if it's in it
       L_int32::iterator it = std::find(waiting_.begin(), waiting_.end(), handle);
       if (it != waiting_.end())
@@ -371,7 +372,7 @@ void TimerManager<T, D, E>::remove(int32_t handle)
 template<class T, class D, class E>
 void TimerManager<T, D, E>::schedule(const TimerInfoPtr& info)
 {
-  boost::mutex::scoped_lock lock(timers_mutex_);
+  std::unique_lock<std::mutex> lock(timers_mutex_);
 
   if (info->removed)
   {
@@ -380,7 +381,7 @@ void TimerManager<T, D, E>::schedule(const TimerInfoPtr& info)
 
   updateNext(info, T::now());
   {
-    boost::mutex::scoped_lock lock(waiting_mutex_);
+    std::unique_lock<std::mutex> lock(waiting_mutex_);
 
     waiting_.push_back(info->handle);
     // waitingCompare requires a lock on the timers_mutex_
@@ -421,7 +422,7 @@ void TimerManager<T, D, E>::updateNext(const TimerInfoPtr& info, const T& curren
 template<class T, class D, class E>
 void TimerManager<T, D, E>::setPeriod(int32_t handle, const D& period, bool reset)
 {
-  boost::mutex::scoped_lock lock(timers_mutex_);
+  std::unique_lock<std::mutex> lock(timers_mutex_);
   TimerInfoPtr info = findTimer(handle);
 
   if (!info)
@@ -430,13 +431,13 @@ void TimerManager<T, D, E>::setPeriod(int32_t handle, const D& period, bool rese
   }
 
   {
-    boost::mutex::scoped_lock lock(waiting_mutex_);
-  
+    std::unique_lock<std::mutex> lock(waiting_mutex_);
+
     if(reset)
     {
       info->next_expected = T::now() + period;
     }
-    
+
     // else if some time has elapsed since last cb (called outside of cb)
     else if( (T::now() - info->last_real) < info->period)
     {
@@ -446,17 +447,17 @@ void TimerManager<T, D, E>::setPeriod(int32_t handle, const D& period, bool rese
       {
         info->next_expected = T::now();
       }
-   
+
       // else, account for elapsed time by using last_real+period
       else
       {
         info->next_expected = info->last_real + period;
       }
     }
-    
+
     // Else if called in a callback, last_real has not been updated yet => (now - last_real) > period
     // In this case, let next_expected be updated only in updateNext
-    
+
     info->period = period;
     waiting_.sort(boost::bind(&TimerManager::waitingCompare, this, _1, _2));
   }
@@ -473,7 +474,7 @@ void TimerManager<T, D, E>::threadFunc()
   {
     T sleep_end;
 
-    boost::mutex::scoped_lock lock(timers_mutex_);
+    std::unique_lock<std::mutex> lock(timers_mutex_);
 
     // detect time jumping backwards
     if (T::now() < current)
@@ -500,7 +501,7 @@ void TimerManager<T, D, E>::threadFunc()
     current = T::now();
 
     {
-      boost::mutex::scoped_lock waitlock(waiting_mutex_);
+      std::unique_lock<std::mutex> waitlock(waiting_mutex_);
 
       if (waiting_.empty())
       {
@@ -556,14 +557,22 @@ void TimerManager<T, D, E>::threadFunc()
       // since simulation time may be running faster than real time.
       if (!T::isSystemTime())
       {
-        timers_cond_.timed_wait(lock, boost::posix_time::milliseconds(1));
+        timers_cond_.wait_for(lock, std::chrono::milliseconds(1));
       }
       else
       {
-        // On system time we can simply sleep for the rest of the wait time, since anything else requiring processing will
-        // signal the condition variable
-        int32_t remaining_time = std::max((int32_t)((sleep_end - current).toSec() * 1000.0f), 1);
-        timers_cond_.timed_wait(lock, boost::posix_time::milliseconds(remaining_time));
+        if (typeid(T) == typeid(MonotonicTime))
+        {
+          std::chrono::steady_clock::time_point end_tp(std::chrono::nanoseconds(sleep_end.toNSec()));
+          timers_cond_.wait_until(lock, end_tp);
+        }
+        else
+        {
+          // On system time we can simply sleep for the rest of the wait time, since anything else requiring processing will
+          // signal the condition variable
+          int32_t remaining_time = std::max((int32_t) ((sleep_end - current).toSec() * 1000.0f), 1);
+          timers_cond_.wait_for(lock, std::chrono::milliseconds(remaining_time));
+        }
       }
     }
 
