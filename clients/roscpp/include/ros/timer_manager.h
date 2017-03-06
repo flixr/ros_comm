@@ -28,6 +28,20 @@
 #ifndef ROSCPP_TIMER_MANAGER_H
 #define ROSCPP_TIMER_MANAGER_H
 
+// check if we might need to include our own backported version boost::condition_variable
+// in order to use CLOCK_MONOTONIC for the SteadyTimer
+#ifdef BOOST_THREAD_HAS_CONDATTR_SET_CLOCK_MONOTONIC
+#include <boost/version.hpp>
+#if BOOST_VERSION < 106100
+// use backported version of boost condition variable, see https://svn.boost.org/trac/boost/ticket/6377
+#include "boost_161_condition_variable.h"
+#else // Boost version is 1.61 or greater and has the steady clock fixes
+#include <boost/thread/condition_variable.hpp>
+#endif
+#else // !BOOST_THREAD_HAS_CONDATTR_SET_CLOCK_MONOTONIC
+#include <boost/thread/condition_variable.hpp>
+#endif // BOOST_THREAD_HAS_CONDATTR_SET_CLOCK_MONOTONIC
+
 #include "ros/forwards.h"
 #include "ros/time.h"
 #include "ros/file_log.h"
@@ -35,7 +49,6 @@
 #include <boost/thread/thread.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/recursive_mutex.hpp>
-#include <boost/thread/condition_variable.hpp>
 
 #include "ros/assert.h"
 #include "ros/callback_queue_interface.h"
@@ -431,12 +444,12 @@ void TimerManager<T, D, E>::setPeriod(int32_t handle, const D& period, bool rese
 
   {
     boost::mutex::scoped_lock lock(waiting_mutex_);
-  
+
     if(reset)
     {
       info->next_expected = T::now() + period;
     }
-    
+
     // else if some time has elapsed since last cb (called outside of cb)
     else if( (T::now() - info->last_real) < info->period)
     {
@@ -446,17 +459,17 @@ void TimerManager<T, D, E>::setPeriod(int32_t handle, const D& period, bool rese
       {
         info->next_expected = T::now();
       }
-   
+
       // else, account for elapsed time by using last_real+period
       else
       {
         info->next_expected = info->last_real + period;
       }
     }
-    
+
     // Else if called in a callback, last_real has not been updated yet => (now - last_real) > period
     // In this case, let next_expected be updated only in updateNext
-    
+
     info->period = period;
     waiting_.sort(boost::bind(&TimerManager::waitingCompare, this, _1, _2));
   }
@@ -560,10 +573,21 @@ void TimerManager<T, D, E>::threadFunc()
       }
       else
       {
-        // On system time we can simply sleep for the rest of the wait time, since anything else requiring processing will
-        // signal the condition variable
-        int32_t remaining_time = std::max((int32_t)((sleep_end - current).toSec() * 1000.0f), 1);
-        timers_cond_.timed_wait(lock, boost::posix_time::milliseconds(remaining_time));
+        // we have to distinguish between MonotonicTime and WallTime here,
+        // because boost timed_wait with duration just adds the duration to current system time
+        // this however requires boost 1.61, see: https://svn.boost.org/trac/boost/ticket/6377
+        if (typeid(T) == typeid(SteadyTime))
+        {
+          boost::chrono::steady_clock::time_point end_tp(boost::chrono::nanoseconds(sleep_end.toNSec()));
+          timers_cond_.wait_until(lock, end_tp);
+        }
+        else
+        {
+          // On system time we can simply sleep for the rest of the wait time, since anything else requiring processing will
+          // signal the condition variable
+          int32_t remaining_time = std::max((int32_t) ((sleep_end - current).toSec() * 1000.0f), 1);
+          timers_cond_.timed_wait(lock, boost::posix_time::milliseconds(remaining_time));
+        }
       }
     }
 
