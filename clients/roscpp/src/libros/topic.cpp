@@ -32,16 +32,16 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "ros/topic.h"
 #include "ros/callback_queue.h"
+#include "ros/topic.h"
 
 namespace ros
 {
 namespace topic
 {
 
-void waitForMessageImpl(SubscribeOptions& ops, 
-			const boost::function<bool(void)>& ready_pred, 
+void waitForMessageImpl(SubscribeOptions& ops,
+			const boost::function<bool(void)>& ready_pred,
 			NodeHandle& nh, ros::Duration timeout)
 {
   ros::CallbackQueue queue;

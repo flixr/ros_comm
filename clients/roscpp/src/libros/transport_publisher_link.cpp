@@ -32,6 +32,8 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "ros/callback_queue.h"
+
 #include <ros/platform.h>  // platform dependendant requirements
 
 #include "ros/transport_publisher_link.h"
@@ -45,7 +47,6 @@
 #include "ros/poll_manager.h"
 #include "ros/transport/transport_tcp.h"
 #include "ros/timer_manager.h"
-#include "ros/callback_queue.h"
 #include "ros/internal_timer_manager.h"
 
 #include <boost/bind.hpp>
