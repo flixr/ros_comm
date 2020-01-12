@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, Willow Garage, Inc.
+ * Copyright (C) 2008, Morgan Quigley and Willow Garage, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -25,25 +25,32 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "ros/timer_manager.h"
-#include "ros/internal_timer_manager.h"
+#ifndef ROSCPP_INTERNAL_CONDITION_VARIABLE_H
+#define ROSCPP_INTERNAL_CONDITION_VARIABLE_H
 
-namespace ros
-{
+#include <boost/version.hpp>
 
-static InternalTimerManagerPtr g_timer_manager;
+// check if we might need to include our own backported version boost::condition_variable
+// in order to use CLOCK_MONOTONIC for the condition variable and for the SteadyTimer
+#if !defined(_WIN32) && !defined(__APPLE__) && (BOOST_VERSION < 106100)
+  #define ROSCPP_USE_BACKPORTED_BOOST_CONDITION_VARIABLE_IMPLEMENTATION
+#endif
 
-InternalTimerManagerPtr getInternalTimerManager()
-{
-  return g_timer_manager;
-}
-
-void initInternalTimerManager()
-{
-  if (!g_timer_manager)
-  {
-    g_timer_manager.reset(new InternalTimerManager);
+#ifdef ROSCPP_USE_BACKPORTED_BOOST_CONDITION_VARIABLE_IMPLEMENTATION
+  // use backported version of boost condition variable, see https://svn.boost.org/trac/boost/ticket/6377
+  #include "boost_161_condition_variable.h"
+  namespace roscpp {
+  namespace internal {
+    typedef boost_161::condition_variable condition_variable;
   }
-}
+  }
+#else
+  #include <boost/thread/condition_variable.hpp>
+  namespace roscpp {
+  namespace internal {
+    typedef boost::condition_variable condition_variable;
+  }
+  }
+#endif
 
-} // namespace ros
+#endif  // ROSCPP_INTERNAL_CONDITION_VARIABLE_H
